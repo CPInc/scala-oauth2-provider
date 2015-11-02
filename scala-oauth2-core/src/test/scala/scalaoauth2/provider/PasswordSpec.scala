@@ -17,7 +17,9 @@ class PasswordSpec extends FlatSpec with ScalaFutures with OptionValues {
   "Password when client credential not required" should "handle request" in handlesRequest(passwordNoClientCredReq, None)
 
   def handlesRequest(password: Password, clientCredential: Option[ClientCredential]) = {
-    val request = AuthorizationRequest(Map(), Map("username" -> Seq("user"), "password" -> Seq("pass"), "scope" -> Seq("all")))
+    //The username and password: httpwatch:foo
+
+    val request = AuthorizationRequest(Map("Authorization" -> Seq("aHR0cHdhdGNoOmZvbw==")), Map("scope" -> Seq("all")))
     val f = password.handleRequest(request, clientCredential, new MockDataHandler() {
 
       override def findUser(username: String, password: String): Future[Option[User]] = Future.successful(Some(MockUser(10000, "username")))

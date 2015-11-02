@@ -2,6 +2,7 @@ package scalaoauth2.provider
 
 import scala.concurrent.Future
 import scala.concurrent.ExecutionContext.Implicits.global
+import org.apache.commons.codec.binary.Base64.decodeBase64
 
 case class GrantHandlerResult(tokenType: String, accessToken: String, expiresIn: Option[Long], refreshToken: Option[String], scope: Option[String])
 
@@ -66,16 +67,32 @@ class Password extends GrantHandler {
       throw new InvalidRequest("Client credential is required")
     }
 
-    val username = request.requireUsername
-    val password = request.requirePassword
+    //We don't want the clients to send username and password in query string. We want to use HTTP Basic Authentication
 
-    handler.findUser(username, password).flatMap { userOption =>
-      val user = userOption.getOrElse(throw new InvalidGrant("username or password is incorrect"))
-      val scope = request.scope
-      val clientId = maybeClientCredential.map { _.clientId }
-      val authInfo = AuthInfo(user, clientId, scope, None)
+    getHeader(request).map{ userCtx =>
+      val username = userCtx.username
+      val password = userCtx.password
 
-      issueAccessToken(handler, authInfo)
+      handler.findUser(username, password).flatMap { userOption =>
+        val user = userOption.getOrElse(throw new InvalidGrant("username or password is incorrect"))
+        val scope = request.scope
+        val clientId = maybeClientCredential.map { _.clientId }
+        val authInfo = AuthInfo(user, clientId, scope, None)
+
+        issueAccessToken(handler, authInfo)
+      }
+    }.getOrElse(throw new InvalidRequest("Invalid HTTP Header credential is required"))
+
+  }
+
+  case class userCtx(username: String, password: String)
+
+  def getHeader(request: AuthorizationRequest): Option[userCtx] = {
+    request.headers.get("Authorization").headOption.flatMap { encoded =>
+      new String(decodeBase64(encoded.toString.getBytes)).split(":").toList match {
+        case username :: password :: Nil => Some(userCtx(username, password))
+        case _ => None
+      }
     }
   }
 }
