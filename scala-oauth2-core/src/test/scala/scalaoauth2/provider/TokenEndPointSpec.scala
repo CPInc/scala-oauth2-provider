@@ -95,7 +95,7 @@ class TokenEndPointSpec extends FlatSpec with ScalaFutures {
 
   it should "not be invalid request without client credential when not required" in {
     val request = AuthorizationRequest(
-      Map(),
+      Map("Authorization" -> Seq("Basic Y2xpZW50X2lkX3ZhbHVlOmNsaWVudF9zZWNyZXRfdmFsdWU=")),
       Map("grant_type" -> Seq("password"), "username" -> Seq("user"), "password" -> Seq("pass"), "scope" -> Seq("all"))
     )
 

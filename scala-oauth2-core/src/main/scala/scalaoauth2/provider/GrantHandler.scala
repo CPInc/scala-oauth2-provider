@@ -88,8 +88,13 @@ class Password extends GrantHandler {
   case class userCtx(username: String, password: String)
 
   def getHeader(request: AuthorizationRequest): Option[userCtx] = {
-    request.headers.get("Authorization").headOption.flatMap { encoded =>
-      new String(decodeBase64(encoded.toString.getBytes)).split(":").toList match {
+    request.headers.get("Authorization").headOption.flatMap{ authParam =>
+
+      val encoded = authParam.headOption.flatMap{ r =>
+        r.split(" ").filter(x => !x.contains("Basic")).headOption
+      }.getOrElse(throw new InvalidRequest("Invalid HTTP Header. Authorization format not supported"))
+
+      new String(decodeBase64(encoded.getBytes)).split(":").toList match {
         case username :: password :: Nil => Some(userCtx(username, password))
         case _ => None
       }
